@@ -88,8 +88,8 @@ def _vector(x):
 
 
 def determine_coefs(x, min_lag=0, max_lag=20, min_dims=1, max_dims=10):
-    lag_i, lag_d = lagged_ami(x, max_lag=50, n_bins=10)
-    dim_i, dim_d = global_false_nearest_neighbors(x, 6, max_dims=10)
+    lag_i, lag_d = lagged_ami(x, min_lag=min_lag, max_lag=max_lag, n_bins=10)
+    dim_i, dim_d = global_false_nearest_neighbors(x, 6, max_dims=10, min_dims)
     lag = lag_i[np.argmin(lag_d)]
     for i in range(len(dim_d)):
         if dim_d[i] == 0:
