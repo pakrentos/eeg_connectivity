@@ -1,0 +1,1 @@
+SUBJECTS_DIR = '/Users/nikitasmirnov/Lab/Subjects'
