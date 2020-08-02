@@ -1,7 +1,9 @@
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend as K, layers
 import numpy as np
 from tensorflow import keras
-
+import tensorflow as tf
+from matplotlib import pyplot as plt
+import pandas as pd
 
 def coeff_determination(y_true, y_pred):
     SS_res = K.sum(K.square(y_true - y_pred))
@@ -17,11 +19,13 @@ def normalize(arr):
     for shape_i in shape:
         its *= shape_i
     its //= size
+    ind = None
     for i in range(its - 1):
         temp_slice = temp_arr[i*size : (i+1)*size]
         temp_arr[i*size : (i+1)*size] = (temp_slice - np.min(temp_slice))/(np.max(temp_slice) - np.min(temp_slice))
-    temp_slice = temp_arr[(i+1)*size:]
-    temp_arr[(i+1)*size:] = (temp_slice - np.min(temp_slice))/(np.max(temp_slice) - np.min(temp_slice))
+        ind = i
+    temp_slice = temp_arr[(ind+1)*size:]
+    temp_arr[(ind+1)*size:] = (temp_slice - np.min(temp_slice))/(np.max(temp_slice) - np.min(temp_slice))
     return temp_arr.reshape(*shape)
 
 
@@ -73,3 +77,29 @@ class EarlyStopDifference(keras.callbacks.Callback):
         # Printing the epoch the model has stopped
         if (self.stopped_epoch > 0) & (self.verbose != 0):
             print("Epoch %05d: early stopping" % (self.stopped_epoch + 1))
+
+def baseline_model(inputs=5, outputs=5):
+    model = tf.keras.Sequential()
+    model.add(layers.Dense(inputs, activation='linear'))
+    model.add(layers.Dense(10, activation='tanh'))
+    model.add(layers.Dense(10, activation='tanh'))
+    model.add(layers.Dense(outputs, activation='linear'))
+    # Компиляция модели
+    model.compile(loss='mse', optimizer=tf.optimizers.Adam(0.001), metrics=[coeff_determination])
+    return model
+
+
+def plot_history(history):
+    hist = pd.DataFrame(history.history)
+    hist['epoch'] = history.epoch
+
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111)
+    ax.xlabel('Epoch')
+    ax.ylabel('Loss')
+    ax.plot(hist['epoch'], hist['loss'],
+           label = 'Loss function')
+    ax.plot(hist['epoch'], hist['val_loss'],
+           label = 'val_loss')
+    ax.legend()
+    return fig

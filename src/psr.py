@@ -9,8 +9,13 @@ warnings.filterwarnings('ignore')
 # параметры для альфа частот (8-12 гц): 6 lag, 5 dims
 # для теты (4-8 гц): 11 lag, 5 dims
 def reconstruct(x, lag, n_dims):
-    inds = [np.arange(0, n_dims)*lag + i for i in range(x.shape[-1] - (n_dims-1)*lag)]
-    return x[inds].T
+    x = _vector(x)
+
+    if lag * (n_dims - 1) >= x.shape[0] // 2:
+        raise ValueError('longest lag cannot be longer than half the length of x(t)')
+
+    lags = lag * np.arange(n_dims)
+    return np.vstack(x[lag:lag - lags[-1] or None] for lag in lags).transpose()
 
 
 def global_false_nearest_neighbors(x, lag, min_dims=1, max_dims=10, **cutoffs):
@@ -75,11 +80,18 @@ def _vector_pair(a, b):
     return a, np.squeeze(b)
 
 
+def _vector(x):
+    x = np.squeeze(x)
+    if x.ndim != 1:
+        raise ValueError('x(t) must be a 1-dimensional signal')
+    return x
+
+
 def determine_coefs(x, min_lag=0, max_lag=20, min_dims=1, max_dims=10):
     lag_i, lag_d = lagged_ami(x, max_lag=50, n_bins=10)
     dim_i, dim_d = global_false_nearest_neighbors(x, 6, max_dims=10)
     lag = lag_i[np.argmin(lag_d)]
-    for i in range(dim_d):
+    for i in range(len(dim_d)):
         if dim_d[i] == 0:
             break
     dim = dim_i[i+1]
