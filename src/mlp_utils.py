@@ -81,11 +81,11 @@ class EarlyStopDifference(keras.callbacks.Callback):
 def baseline_model(inputs=5, outputs=5):
     model = tf.keras.Sequential()
     model.add(layers.Dense(inputs, activation='linear'))
-    model.add(layers.Dense(10, activation='tanh'))
-    model.add(layers.Dense(10, activation='tanh'))
+    model.add(layers.Dense(10, kernel_initializer='random_normal', bias_initializer='zeros', activation='tanh'))
+    model.add(layers.Dense(10, kernel_initializer='random_normal', bias_initializer='zeros', activation='tanh'))
     model.add(layers.Dense(outputs, activation='linear'))
     # Компиляция модели
-    model.compile(loss='mse', optimizer=tf.optimizers.Adam(0.001), metrics=[coeff_determination])
+    model.compile(loss='mse', optimizer=keras.optimizers.Adam(0.001), metrics=[coeff_determination])
     return model
 
 
@@ -95,11 +95,11 @@ def plot_history(history):
 
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111)
-    ax.xlabel('Epoch')
-    ax.ylabel('Loss')
-    ax.plot(hist['epoch'], hist['loss'],
-           label = 'Loss function')
-    ax.plot(hist['epoch'], hist['val_loss'],
-           label = 'val_loss')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.plot(hist['epoch'], hist['val_coeff_determination'],
+           label='Val Coefficient of determination')
+    ax.plot(hist['epoch'], hist['coeff_determination'],
+           label='Coefficient of determination')
     ax.legend()
-    return fig
+    return fig, ax
