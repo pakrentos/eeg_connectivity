@@ -1,5 +1,4 @@
 import numpy as np
-from .settings import SUBJECTS_DIR
 from os.path import join
 
 r_mapping = {'O2': 0, 'O1': 1, 'P4': 2, 'P3': 3, 'C4': 4, 'C3': 5, 'F4': 6,
@@ -18,13 +17,14 @@ def extract(data_stream):
     return np.array(data)
 
 
-def format_fname(_group, _hand, _subj, _tr_num):
-    directory = SUBJECTS_DIR
+def format_fname(_group, _hand, _subj, _tr_num, sub_dir=None):
+    if sub_dir is None:
+        raise ValueError('Directory for searching subjects is not provided')
     fname_pattern = f'{_group}_subject_{_subj}_{_hand}_tr_{_tr_num}.dat'
-    return join(directory, fname_pattern)
+    return join(sub_dir, fname_pattern)
 
 
-def extract_all(group=None, hand=None, subject=None, trial=None):
+def extract_all(group=None, hand=None, subject=None, trial=None, sub_dir='/Users/nikitasmirnov/Lab/Subjects'):
     hands = ('lefthand', 'righthand')
     groups = ('OLD', 'YOUNG')
     subjects = np.arange(1, 11)
@@ -38,7 +38,7 @@ def extract_all(group=None, hand=None, subject=None, trial=None):
         for h in hand:
             for s in subject:
                 for t in trial:
-                    fin = open(format_fname(g, h, s, t))
+                    fin = open(format_fname(g, h, s, t, sub_dir=sub_dir))
                     epochs.append(extract(fin))
                     fin.close()
     return np.array(epochs)

@@ -90,11 +90,13 @@ def _vector(x):
 def determine_coefs(x, min_lag=0, max_lag=20, min_dims=1, max_dims=10):
     lag_i, lag_d = lagged_ami(x, min_lag=min_lag, max_lag=max_lag, n_bins=10)
     lag = lag_i[np.argmin(lag_d)]
+    if np.min(lag_d) > 1/np.e:
+        print(f'WARNING: lag is larger than 1/e. Increase the max_lag parameter. Current lag is {np.min(lag_d)}')
     dim_i, dim_d = global_false_nearest_neighbors(x, lag, max_dims=max_dims, min_dims=min_dims)
     ind = 0
     for i in range(len(dim_d)):
         if dim_d[i] == 0:
             ind = i
             break
-    dim = dim_i[ind+1]
+    dim = dim_i[ind]
     return lag, dim
