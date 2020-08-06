@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.integrate import solve_ivp as ivp
 
 def get_rossler(z0=np.zeros(6), epsylon=[0., 0.03], a=0.15, p=0.2, c=10, omega=[0.99, 0.95], fps=250, time=(0, 200)):
     def rossler(t, vec: np.array):
@@ -12,7 +13,7 @@ def get_rossler(z0=np.zeros(6), epsylon=[0., 0.03], a=0.15, p=0.2, c=10, omega=[
         return res
     omega = np.array(omega)
     epsylon = np.array(epsylon)
-    start_time = time[0]
+    start_time = 0
     end_time = time[1]
     X1 = 0
     Y1 = 1
@@ -24,6 +25,6 @@ def get_rossler(z0=np.zeros(6), epsylon=[0., 0.03], a=0.15, p=0.2, c=10, omega=[
     # z0 = np.array([ 4.2930454 ,  2.56096433,  0.03710937, -4.2591115 , -3.92001009, 0.01380057])
     # z0 = np.zeros(6)
     res1 = ivp(rossler, (start_time,end_time), z0, t_eval=t)
-    y = res1['y']
-    t_span = res1['t']
+    y = res1['y'][:, fps*time[0]:]
+    t_span = res1['t'][fps*time[0]:]
     return t_span, y

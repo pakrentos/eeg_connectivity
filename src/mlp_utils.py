@@ -32,20 +32,20 @@ def normalize(arr):
 class EarlyStopDifference(keras.callbacks.Callback):
     # Custom callback that stops training if the difference between training and validation
     # loss function is more than delta for the past patience training epochs
-
+    
     ### Parameters:
-    ### delta: Integer, default=0; Minimal affordable difference between loss functions
+    ### min_delta: Integer, default=0; Minimal affordable difference between loss functions
     ### patience: Integer, default=0; Number of epochs it is tolerable to have difference greater than delta
     ### verbose: Integer, default=0; Prints output if it is 1
-
-    def __init__(self, patience=0, delta=0, verbose=0):
+    
+    def __init__(self, patience=0, min_delta=0, verbose=0):
         # Initializing parameters
         super(EarlyStopDifference, self).__init__()
-        self.patience = patience
-        self.delta = delta
-        self.verbose = verbose
-        self.counter = 0
-
+        self.patience=patience
+        self.min_delta=min_delta
+        self.verbose=verbose
+        self.counter=0
+    
     def on_train_begin(self, logs=None):
         # The number of epoch it has waited when loss is no longer minimum.
         self.wait = 0
@@ -59,7 +59,9 @@ class EarlyStopDifference(keras.callbacks.Callback):
         mse = logs['loss']
         val_mse = logs['val_loss']
         # Comparing them to delta
-        if ((mse - val_mse) <= self.delta):
+        if self.verbose == 1:
+            print("Epoch: ", epoch, "; Value: ", abs(mse - val_mse))
+        if (abs(mse - val_mse) <= self.min_delta):
             # Resetting counter
             self.wait = 0
         else:
@@ -69,24 +71,57 @@ class EarlyStopDifference(keras.callbacks.Callback):
                 # Stopping the model if wait >= patience
                 self.stopped_epoch = epoch
                 self.model.stop_training = True
-                if (self.verbose != 0):
-                    print("Model stopped because mse and val_mse differ for more than ", self.delta, " for the past ",
-                          self.patience, " training epochs.")
-
+                self.model.flag=1
+            
     def on_train_end(self, logs=None):
         # Printing the epoch the model has stopped
-        if (self.stopped_epoch > 0) & (self.verbose != 0):
+        if ((self.stopped_epoch > 0) and (self.verbose == 1)):
+            print("Epoch %05d: early stopping" % (self.stopped_epoch + 1))
+            
+    def on_train_end(self, logs=None):
+        # Printing the epoch the model has stopped
+        if ((self.stopped_epoch > 0) and (self.verbose == 1)):
             print("Epoch %05d: early stopping" % (self.stopped_epoch + 1))
 
-def baseline_model(inputs=5, outputs=5):
+def baseline_model(inputs=5, outputs=5, metric=coeff_determination):
     model = tf.keras.Sequential()
     model.add(layers.Dense(inputs, activation='linear'))
     model.add(layers.Dense(10, kernel_initializer='random_normal', bias_initializer='zeros', activation='tanh'))
     model.add(layers.Dense(10, kernel_initializer='random_normal', bias_initializer='zeros', activation='tanh'))
     model.add(layers.Dense(outputs, activation='linear'))
     # Компиляция модели
-    model.compile(loss='mse', optimizer=keras.optimizers.Adam(0.001), metrics=[coeff_determination])
+    model.compile(loss='mse', optimizer=keras.optimizers.Adam(0.001), metrics=[metric])
     return model
+
+def test_predict(train_src,
+                 train_trgt,
+                 val_src,
+                 val_trgt,
+                 dif_delta=0.001,
+                 stop_delta=0.0001,
+                 dif_patience=10,
+                 stop_patience=15,
+                 metric=coeff_determination ):
+    my_callbacks = [
+        EarlyStopDifference(patience=dif_patience, min_delta=dif_delta,  verbose=0),
+        tf.keras.callbacks.EarlyStopping(patience=stop_patience, min_delta=stop_delta, restore_best_weights=False),
+    ]
+    flag = 1
+    while flag != 0:
+        model = baseline_model(inputs=train_src.shape[-1], outputs=train_trgt.shape[-1], metric=metric)
+        model.flag = 0
+        hist = model.fit(
+            train_src,
+            train_trgt,
+            validation_data=(val_src, val_trgt),
+            epochs=300,
+            callbacks=my_callbacks,
+            batch_size=100,
+            verbose=False
+        )
+        score = hist.history['val_coeff_determination'][-1]
+        flag = model.flag
+    return score
 
 
 def plot_history(history):
