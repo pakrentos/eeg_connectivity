@@ -101,10 +101,11 @@ def test_predict(train_src,
                  stop_delta=0.0001,
                  dif_patience=10,
                  stop_patience=15,
-                 metric=coeff_determination ):
+                 metric=coeff_determination
+                 restore_best_weights=False):
     my_callbacks = [
         EarlyStopDifference(patience=dif_patience, min_delta=dif_delta,  verbose=0),
-        tf.keras.callbacks.EarlyStopping(patience=stop_patience, min_delta=stop_delta, restore_best_weights=False),
+        tf.keras.callbacks.EarlyStopping(patience=stop_patience, min_delta=stop_delta, restore_best_weights=restore_best_weights),
     ]
     flag = 1
     while flag != 0:
