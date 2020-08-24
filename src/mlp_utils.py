@@ -1,9 +1,10 @@
-from tensorflow.keras import backend as K, layers
+from tensorflow.keras import backend as K, layers, Sequential
 import numpy as np
 from tensorflow import keras
 import tensorflow as tf
 from matplotlib import pyplot as plt
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 def coeff_determination(y_true, y_pred):
     SS_res = K.sum(K.square(y_true - y_pred))
@@ -83,46 +84,57 @@ class EarlyStopDifference(keras.callbacks.Callback):
         if ((self.stopped_epoch > 0) and (self.verbose == 1)):
             print("Epoch %05d: early stopping" % (self.stopped_epoch + 1))
 
-def baseline_model(inputs=5, outputs=5, metric=coeff_determination):
-    model = tf.keras.Sequential()
+
+class ResearchModel(keras.Sequential):
+    def __init__(self):
+        super().__init__()
+        self.flag = 1
+
+    def generate_weights(self, loc=0, scale=0.5):
+        """
+        Updates model weights without recompilation
+        weights: list of numpy arrays with weights of the model
+        """
+        result = []
+        for w in self.get_weights():
+            arr = np.random.normal(loc, scale, size=w.shape)
+            arr = arr.astype(np.float32)
+            result.append(arr)
+        self.set_weights(result)
+        self.flag = 1
+
+
+def baseline_model(inputs=5, outputs=5):
+    # Creates a Keras neural network model
+    model = ResearchModel()
     model.add(layers.Dense(inputs, activation='linear'))
-    model.add(layers.Dense(10, kernel_initializer='random_normal', bias_initializer='zeros', activation='tanh'))
-    model.add(layers.Dense(10, kernel_initializer='random_normal', bias_initializer='zeros', activation='tanh'))
+    model.add(layers.Dense(10, kernel_initializer='random_normal', bias_initializer='random_normal', activation='tanh'))
+    model.add(layers.Dense(10, kernel_initializer='random_normal', bias_initializer='random_normal', activation='tanh'))
     model.add(layers.Dense(outputs, activation='linear'))
-    # Компиляция модели
-    model.compile(loss='mse', optimizer=keras.optimizers.Adam(0.001), metrics=[metric])
+    # Model Compilation
+    model.compile(loss='mse', optimizer=keras.optimizers.Adam(0.001), metrics=[coeff_determination])
     return model
 
-def test_predict(train_src,
-                 train_trgt,
-                 val_src,
-                 val_trgt,
-                 dif_delta=0.001,
-                 stop_delta=0.0001,
-                 dif_patience=10,
-                 stop_patience=15,
-                 metric=coeff_determination,
-                 restore_best_weights=False):
-    my_callbacks = [
-        EarlyStopDifference(patience=dif_patience, min_delta=dif_delta,  verbose=0),
-        tf.keras.callbacks.EarlyStopping(patience=stop_patience, min_delta=stop_delta, restore_best_weights=restore_best_weights),
-    ]
-    flag = 1
-    while flag != 0:
-        model = baseline_model(inputs=train_src.shape[-1], outputs=train_trgt.shape[-1], metric=metric)
+def train_network(inputs, outputs, model, num_epochs=90000, my_callbacks=None, verbose=False):
+
+    init_src, init_trgt, val_src, val_trgt = train_test_split(inputs, outputs, test_size=0.5, shuffle=True)
+
+    i = 1
+    r2 = 0
+
+    while model.flag != 0:
+        if verbose:
+            print('Model: ', i, 'Training start!')
         model.flag = 0
-        hist = model.fit(
-            train_src,
-            train_trgt,
-            validation_data=(val_src, val_trgt),
-            epochs=300,
-            callbacks=my_callbacks,
-            batch_size=100,
-            verbose=False
-        )
-        score = hist.history['val_coeff_determination'][-1]
-        flag = model.flag
-    return score
+        history = model.fit(init_src, init_trgt,
+                            epochs=num_epochs, batch_size=64, callbacks=my_callbacks,
+                            validation_data=(val_src, val_trgt),
+                            verbose=0)
+        r2 = history.history['val_coeff_determination'][-1]
+        if verbose:
+            print('Model: ', i, 'Training end, flag = ', model.flag, 'epoch: ', len(history.history['val_coeff_determination']))
+        i+=1
+    return r2
 
 
 def plot_history(history):
