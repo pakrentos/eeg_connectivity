@@ -49,6 +49,11 @@ def select_channel(arr, ch):
         ch = r_mapping[ch]
     elif ch not in r_mapping.values():
         raise ValueError('Wrong channel')
-    mesh = [np.arange(arr.shape[i]) for i in range(len(arr.shape) - 2)] + [np.array([ch]), np.arange(arr.shape[-1])]
+    mesh = []
+    for i in range(len(arr.shape)):
+        if arr.shape[i] == 31:
+            mesh.append(np.array([ch]))
+        else:
+            mesh.append(np.arange(arr.shape[i]))
     ixgrid = np.ix_(*mesh)
     return np.squeeze(arr[ixgrid])
